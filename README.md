@@ -1,3 +1,3 @@
 # geminiCLI_onBrowser
 
-first commit.
+set gemini_ClI in python 250627
