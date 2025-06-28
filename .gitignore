@@ -1,4 +1,4 @@
 native-app/register_host.reg
-gemini_cli_host.json
-run_host.bat
-.env
+native-app/gemini_cli_host.json
+native-app/run_host.bat
+native-app/.env
