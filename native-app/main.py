@@ -1,48 +1,94 @@
-import subprocess
+import sys
+import json
+import struct
+import os
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-def execute_gemini_command(prompt_text):
-    """
-    주어진 프롬프트를 사용하여 gemini-cli를 실행하고 결과를 반환하는 함수.
-    """
-    print(f"Gemini CLI에 다음 프롬프트를 전달합니다: '{prompt_text}'")
-    
+load_dotenv()
+
+# --- 로그 및 메시지 함수 (수정 없음) ---
+# ... (이전과 동일) ...
+log_file_path = os.path.join(os.path.expanduser("~"), "gemini_cli_log.txt")
+def log_message(message):
+    with open(log_file_path, "a", encoding="utf-8") as f:
+        f.write(f"{message}\n")
+
+def read_message():
+    raw_length = sys.stdin.buffer.read(4)
+    if not raw_length:
+        sys.exit(0)
+    message_length = struct.unpack('@I', raw_length)[0]
+    message = sys.stdin.buffer.read(message_length).decode("utf-8")
+    return json.loads(message)
+
+def send_message(message_content):
+    encoded_content = json.dumps(message_content).encode("utf-8")
+    message_length = struct.pack('@I', len(encoded_content))
+    sys.stdout.buffer.write(message_length)
+    sys.stdout.buffer.write(encoded_content)
+    sys.stdout.buffer.flush()
+
+
+# --- Gemini API 직접 호출 함수 (수정 없음) ---
+def call_gemini_api(full_prompt_text):
     try:
-        # 윈도우 환경에서는 'gemini'가 아니라 'gemini.cmd'를 직접 호출합니다.
-        # 이렇게 하면 셸을 통하지 않고도 명령어를 정확히 찾을 수 있습니다.
-        command = [
-            'gemini.cmd',  # <-- 'gemini'를 'gemini.cmd'로 변경했습니다!
-            '-a',
-            '-p',
-            prompt_text
-        ]
-
-        # subprocess.run으로 명령어를 리스트 형태로 안전하게 실행합니다.
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=True,
-            encoding='utf-8'
-        )
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return {"status": "error", "message": "GEMINI_API_KEY 환경 변수가 설정되지 않았습니다."}
         
-        return result.stdout
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-pro-latest')
+        response = model.generate_content(full_prompt_text)
+        
+        return {"status": "success", "result": response.text}
+    except Exception as e:
+        log_message(f"API Error: {e}")
+        return {"status": "error", "message": f"Gemini API 호출 중 오류가 발생했습니다: {str(e)}"}
 
-    except FileNotFoundError:
-        # 이 오류는 이제 발생하지 않아야 합니다.
-        return "오류: 'gemini.cmd' 명령어를 찾을 수 없습니다. Gemini CLI가 전역으로 올바르게 설치되었는지, PATH가 정확한지 확인해주세요."
-    except subprocess.CalledProcessError as e:
-        # 이 오류는 이제 발생하지 않아야 합니다.
-        return f"Gemini CLI 실행 중 오류가 발생했습니다:\n{e.stderr}"
 
-# 이 스크립트를 터미널에서 직접 실행했을 때만 아래 코드가 동작합니다.
-if __name__ == "__main__":
-    # 테스트용 프롬프트를 정의합니다.
-    test_prompt = "이 디렉토리에 있는 파일들의 목록과 간단한 설명을 표로 만들어줘."
-    
-    # 함수를 호출하여 결과를 받습니다.
-    cli_output = execute_gemini_command(test_prompt)
-    
-    # 최종 결과를 화면에 출력합니다.
-    print("\n--- Gemini CLI 실행 결과 ---")
-    print(cli_output)
-    print("--------------------------")
+# --- 메인 루프 (파일 읽기 기능 추가) ---
+log_message("--- Native host script started (File-reading Version) ---")
+while True:
+    try:
+        received_message = read_message()
+        if received_message and received_message.get("action") == "run_cli":
+            user_prompt = received_message.get("prompt", "")
+            
+            # --- 이 부분이 핵심적인 추가 로직입니다 ---
+            final_prompt = user_prompt
+            
+            # 1. 현재 디렉토리의 모든 파일 내용을 읽어서 하나의 문자열로 합칩니다.
+            #    (실제 서비스에서는 파일 종류, 크기 등을 고려해야 합니다.)
+            try:
+                context_files = []
+                for filename in os.listdir('.'):
+                    # .py 파일만 대상으로 합니다.
+                    if filename.endswith('.py'):
+                        with open(filename, 'r', encoding='utf-8') as f:
+                            file_content = f.read()
+                            # 프롬프트에 파일 정보 추가
+                            context_files.append(f"--- 파일명: {filename} ---\n{file_content}")
+                
+                if context_files:
+                    # 파일 내용과 원래 프롬프트를 조합하여 최종 프롬프트를 만듭니다.
+                    final_prompt = f"""
+                    현재 디렉토리의 파일 내용은 아래와 같습니다.
+                    
+                    {''.join(context_files)}
+                    
+                    ---
+                    위 파일 내용을 바탕으로, 아래 요청에 답변해주세요.
+                    요청: {user_prompt}
+                    """
+            except Exception as e:
+                log_message(f"File reading error: {e}")
+            # --- 여기까지가 추가된 로직입니다 ---
+
+            # API 직접 호출 함수에 최종 프롬프트를 전달합니다.
+            response = call_gemini_api(final_prompt)
+            send_message(response)
+            
+    except Exception as e:
+        log_message(f"Main loop error: {e}")
+        break

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 350px; /* 너비를 더 늘립니다 */
+      font-family: sans-serif;
+      padding: 10px;
+    }
+    textarea {
+      width: 95%;
+      min-height: 60px;
+      margin-bottom: 10px;
+    }
+    button {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #result-box {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      min-height: 100px;
+      white-space: pre-wrap; /* 줄바꿈과 공백을 그대로 표시 */
+      word-wrap: break-word; /* 긴 단어가 영역을 넘어가지 않도록 함 */
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h3>geminiCLI_onBrowser</h3>
+  <textarea id="prompt-input" placeholder="분석할 내용을 입력하세요..."></textarea>
+  <button id="executeBtn">Execute Command</button>
+  <pre id="result-box">결과가 여기에 표시됩니다.</pre>
+
+  <script src="popup.js"></script>
+</body>
+</html>

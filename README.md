@@ -1,3 +1,4 @@
 # geminiCLI_onBrowser
 
-set gemini_ClI in python 250627
+### geminiCLI_onBrowser 0.1v 250628
+### set gemini_ClI in python 250627

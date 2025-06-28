@@ -1,0 +1,9 @@
+{
+  "name": "com.my_company.gemini_cli_on_browser",
+  "description": "Host for executing gemini-cli commands.",
+  "path": "C:\\Users\\AquaCo\\project\\geminiCLI_onBrowser\\native-app\\run_host.bat",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://ekpcjimomogemejinglmajpaomhhpeeg/"
+  ]
+}
