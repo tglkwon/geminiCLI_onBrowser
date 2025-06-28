@@ -1,64 +1,90 @@
-import subprocess
+import sys
+import json
+import struct
 import os
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-def analyze_file_with_gemini(file_path):
-    """
-    주어진 파일 하나의 '내용'을 읽어 Gemini CLI의 표준 입력으로 전달하여 분석을 요청하는 함수.
-    """
-    prompt_text = f"아래 제공되는 코드의 내용이 어떤 역할을 하는지, 그리고 코드의 구조에 대해 자세히 설명해줘."
-    print(f"\n===== '{file_path}' 파일 분석 시작 =====")
-    print(f"프롬프트: {prompt_text}")
+load_dotenv()
 
+# --- 로그 및 메시지 함수 (수정 없음) ---
+log_file_path = os.path.join(os.path.expanduser("~"), "gemini_cli_log.txt")
+def log_message(message):
+    with open(log_file_path, "a", encoding="utf-8") as f:
+        f.write(f"{message}\n")
+
+def read_message():
+    raw_length = sys.stdin.buffer.read(4)
+    if not raw_length:
+        sys.exit(0)
+    message_length = struct.unpack('@I', raw_length)[0]
+    message = sys.stdin.buffer.read(message_length).decode("utf-8")
+    return json.loads(message)
+
+def send_message(message_content):
+    encoded_content = json.dumps(message_content).encode("utf-8")
+    message_length = struct.pack('@I', len(encoded_content))
+    sys.stdout.buffer.write(message_length)
+    sys.stdout.buffer.write(encoded_content)
+    sys.stdout.buffer.flush()
+
+# --- Gemini API 직접 호출 함수 (수정 없음) ---
+def call_gemini_api(full_prompt_text):
     try:
-        # 1. 먼저 파이썬으로 파일 내용을 읽습니다.
-        with open(file_path, 'r', encoding='utf-8') as f:
-            file_content = f.read()
-
-        # 2. Gemini CLI에 전달할 명령어를 구성합니다.
-        #    이제 파일 경로는 인수로 전달하지 않습니다.
-        command = [
-            'gemini.cmd',
-            '-p',
-            prompt_text
-        ]
-
-        # 3. subprocess를 실행하며 'input' 파라미터로 파일 내용을 전달합니다.
-        result = subprocess.run(
-            command,
-            input=file_content,  # <-- 이 부분이 핵심적인 변경점입니다!
-            capture_output=True,
-            text=True,
-            check=True,
-            encoding='utf-8'
-        )
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return {"status": "error", "message": "GEMINI_API_KEY 환경 변수가 설정되지 않았습니다."}
         
-        print("\n--- 분석 결과 ---")
-        print(result.stdout)
-        print("==========================")
-        return True
-
-    except subprocess.CalledProcessError as e:
-        print(f"--- 오류 발생 ---")
-        print(f"'{file_path}' 파일 분석 중 Gemini CLI가 오류를 반환했습니다 (Exit Code: {e.returncode}).")
-        print("\n[Gemini CLI가 출력한 오류 내용 (stderr)]: ")
-        print(e.stderr)
-        print("==========================")
-        return False
-    except FileNotFoundError:
-        print("오류: 'gemini.cmd' 명령어를 찾을 수 없습니다. PATH 설정을 확인해주세요.")
-        return False
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-pro-latest')
+        response = model.generate_content(full_prompt_text)
+        
+        return {"status": "success", "result": response.text}
     except Exception as e:
-        print(f"알 수 없는 오류가 발생했습니다: {e}")
-        return False
+        log_message(f"API Error: {e}")
+        return {"status": "error", "message": f"Gemini API 호출 중 오류가 발생했습니다: {str(e)}"}
 
-# 이 스크립트를 터미널에서 직접 실행했을 때만 아래 코드가 동작합니다.
-if __name__ == "__main__":
-    # 현재 디렉토리에서 .py 확장자를 가진 파일을 찾습니다.
-    found_files = False
-    for filename in os.listdir('.'):
-        if filename.endswith('.py'):
-            found_files = True
-            analyze_file_with_gemini(filename)
-    
-    if not found_files:
-        print("분석할 파이썬(.py) 파일이 현재 디렉토리에 없습니다.")
+# --- 메인 루프 (파일 읽기 오류 처리 강화) ---
+log_message("--- Native host script started (Robust File Handling Version) ---")
+while True:
+    try:
+        received_message = read_message()
+        log_message(f"Received message: {received_message}")
+        
+        if received_message and received_message.get("action") == "run_cli":
+            user_prompt = received_message.get("prompt", "")
+            final_prompt = user_prompt
+            
+            # 파일 읽기 과정을 별도의 try-except로 감싸 안정성 확보
+            try:
+                context_files_content = ""
+                # .py와 .txt 파일만 읽도록 제한
+                for filename in os.listdir('.'):
+                    if filename.endswith('.py') or filename.endswith('.txt'):
+                        # errors='ignore' 옵션으로 인코딩 오류 방지
+                        with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
+                            file_content = f.read()
+                            context_files_content += f"--- 파일명: {filename} ---\n{file_content}\n\n"
+                
+                if context_files_content:
+                    final_prompt = f"""
+                    현재 디렉토리의 파일 내용은 아래와 같습니다.
+                    {context_files_content}
+                    ---
+                    위 파일 내용을 바탕으로, 아래 요청에 답변해주세요.
+                    요청: {user_prompt}
+                    """
+                log_message(f"Final prompt generated successfully.")
+
+            except Exception as e:
+                log_message(f"File reading error: {e}")
+                # 파일 읽기에 실패하더라도, 사용자 프롬프트만으로 API 호출 시도
+                final_prompt = user_prompt
+            
+            response = call_gemini_api(final_prompt)
+            send_message(response)
+            log_message(f"Sent response for prompt: {user_prompt}")
+
+    except Exception as e:
+        log_message(f"Fatal error in main loop: {e}")
+        break
