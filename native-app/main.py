@@ -39,9 +39,18 @@ def call_gemini_api(full_prompt_text):
         
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-pro-latest')
-        response = model.generate_content(full_prompt_text)
+        response = model.generate_content(full_prompt_text, stream=True)
         
-        return {"status": "success", "result": response.text}
+         for response in responses:
+            # 오류가 없는 경우에만 청크를 전송합니다.
+            if not response.prompt_feedback.block_reason:
+                send_message({"status": "streaming", "chunk": response.text})
+            # 만약 안전 설정 등으로 응답이 블락되면, 그 정보를 전송합니다.
+            else:
+                 send_message({"status": "error", "message": f"Stream blocked due to: {response.prompt_feedback.block_reason.name}"})
+
+        # 모든 스트리밍이 끝났음을 알립니다.
+        return {"status": "success", "result": "Stream completed."}
     except Exception as e:
         log_message(f"API Error: {e}")
         return {"status": "error", "message": f"Gemini API 호출 중 오류가 발생했습니다: {str(e)}"}
