@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 380px;
+      font-family: sans-serif;
+      padding: 10px;
+    }
+    textarea {
+      width: 95%;
+      min-height: 80px;
+      margin-bottom: 10px;
+    }
+    button {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #result-container {
+      position: relative;
+    }
+    #result-box {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      min-height: 200px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      text-align: left;
+      font-size: 13px;
+    }
+    #copy-btn {
+      width: auto;
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      border: 1px solid #ccc;
+      background-color: white;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 2px 6px;
+    }
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: none;
+      position: absolute;
+      top: 5px;
+      left: 5px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h3>geminiCLI_onBrowser</h3>
+  <textarea id="prompt-input" placeholder="분석할 내용을 입력하세요..."></textarea>
+  <button id="executeBtn">Execute Command</button>
+  
+  <div id="result-container">
+    <div id="spinner" class="spinner"></div>
+    <button id="copy-btn" title="Copy to clipboard">📋</button>
+    <pre id="result-box">결과가 여기에 표시됩니다.</pre>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>

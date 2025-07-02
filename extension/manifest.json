@@ -1,17 +1,21 @@
 {
   "manifest_version": 3,
-  "name": "geminiCLI_onBrowser",
-  "version": "0.1.0",
-  "description": "...",
+  "name": "geminiCLI_onBrowser (Side Panel Ver.)",
+  "version": "0.2.0",
+  "description": "Control local files and CLI from the browser side panel.",
   "background": {
     "service_worker": "background.js"
   },
-  "action": {
-    "default_popup": "popup.html",
-    "default_icon": "icon.png"
-  },
   "permissions": [
     "nativeMessaging",
-    "storage"
-  ]
+    "storage",
+    "sidePanel" 
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open geminiCLI_onBrowser Panel",
+    "default_icon": "icon.png"
+  }
 }

@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyBtn = document.getElementById('copy-btn');
 
     // 백그라운드와 통신할 포트를 설정합니다.
-    const port = chrome.runtime.connect({ name: "popup_channel" });
+    const port = chrome.runtime.connect({ name: "sidepanel_channel" });
 
     // 백그라운드로부터 메시지를 받습니다.
     port.onMessage.addListener((msg) => {
