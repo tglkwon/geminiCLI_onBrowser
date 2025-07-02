@@ -1,21 +1,40 @@
 {
   "manifest_version": 3,
-  "name": "geminiCLI_onBrowser (Side Panel Ver.)",
-  "version": "0.2.0",
-  "description": "Control local files and CLI from the browser side panel.",
-  "background": {
-    "service_worker": "background.js"
-  },
+  "name": "geminiCLI_onBrowser (React Ver.)",
+  "version": "0.3.2",
+  "description": "Control local files and CLI via the browser side panel.",
   "permissions": [
     "nativeMessaging",
     "storage",
-    "sidePanel" 
+    "sidePanel"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "side_panel": {
-    "default_path": "sidepanel.html"
+    "default_path": "react-ui/sidepanel/index.html"
   },
   "action": {
     "default_title": "Open geminiCLI_onBrowser Panel",
-    "default_icon": "icon.png"
+    "default_icon": {
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "react-ui/sidepanel/*",
+        "react-ui/sidepanel/assets/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
   }
 }
