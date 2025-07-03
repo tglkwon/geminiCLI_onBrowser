@@ -1,6 +1,12 @@
 # geminiCLI_onBrowser
 
-### version 0.3.6 rebuild fully in react
+### version 0.3.6 Subject: feat(ux): Implement prompt history and auto-copy features
+This completes Phase 2, "User Experience Enhancements."
+
+- Added a prompt history feature that saves recent commands to chrome.storage and displays them in a list for easy reuse.
+- Implemented a feature to automatically copy the AI's response to the clipboard upon completion and display a confirmation message.
+- Fixed a critical bug that caused infinite loading and disabled buttons by ensuring the native app sends a "success" signal, which stabilizes the entire feature.
+
 ### version 0.3.5 feat(ui): Complete side panel architecture and functionality
 
 Deprecate the popup-based prototype and transition to a new, stable architecture using Chrome's sidePanel API. This approach ensures compliance with Google's policies while providing a robust user experience.

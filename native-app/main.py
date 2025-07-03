@@ -76,9 +76,9 @@ while True:
 
             # API 호출
             final_response = call_gemini_api(final_prompt)
-            # 스트리밍이 아닌 최종 상태 메시지를 보낼 경우
-            if final_response.get("status") != "success":
-                 send_message(final_response)
+            
+            # 결과 전송
+            send_message(final_response)
 
     except Exception as e:
         log_message(f"Main loop error: {e}")

@@ -8,7 +8,14 @@ function App() {
   const [result, setResult] = useState('엔진과 연결 중입니다...');
   const [isLoading, setIsLoading] = useState(true);
   const [history, setHistory] = useState([]);
+  const [copied, setCopied] = useState(false); // 복사 완료 메시지 표시용 상태
   const port = useRef(null);
+  const resultRef = useRef(result); // ⭐️ result 상태를 추적하기 위한 ref
+
+  // ⭐️ result가 변경될 때마다 ref에도 최신 값을 저장
+  useEffect(() => {
+    resultRef.current = result;
+  }, [result]);
 
   // --- 컴포넌트가 처음 로드될 때 실행 ---
   useEffect(() => {
@@ -17,12 +24,29 @@ function App() {
 
     // 2. 메시지 수신 리스너 설정
     port.current.onMessage.addListener((msg) => {
-      setIsLoading(false);
       if (msg.status === "ready") {
+        setIsLoading(false);
         setResult("연결되었습니다. 명령을 입력하세요.");
       } else if (msg.status === "streaming") {
+        setIsLoading(true); // 스트리밍 중에는 계속 로딩 상태
         setResult(prev => (prev.startsWith('엔진과') || prev.startsWith('연결') || prev.startsWith('오류') ? msg.chunk : prev + msg.chunk));
+      } else if (msg.status === "success") {
+        // ⭐️ 'success' 신호를 받으면 로딩을 멈추고 바로 복사 실행
+        setIsLoading(false);
+        
+        // resultRef에서 최신 결과값을 가져와 복사
+        const finalResult = resultRef.current;
+        if (finalResult && !finalResult.startsWith('엔진과') && !finalResult.startsWith('연결')) {
+            navigator.clipboard.writeText(finalResult).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2500);
+            }).catch(err => {
+                console.error('클립보드 자동 복사 실패:', err);
+            });
+        }
+
       } else if (msg.status === "error") {
+        setIsLoading(false);
         setResult("오류가 발생했습니다:\n" + msg.message);
       }
     });
@@ -35,6 +59,20 @@ function App() {
 
     return () => { if (port.current) port.current.disconnect(); };
   }, []);
+
+  // --- ⭐️ '로딩 완료' 시점을 감지하여 자동 복사 실행 ---
+  useEffect(() => {
+    // 로딩이 막 끝났고(false), 결과물이 있으며, 초기 메시지가 아닐 때
+    if (!isLoading && result && !result.startsWith('엔진과') && !result.startsWith('연결') && !result.startsWith('오류')) {
+      navigator.clipboard.writeText(result).then(() => {
+        setCopied(true);
+        const timer = setTimeout(() => setCopied(false), 2500);
+        return () => clearTimeout(timer);
+      }).catch(err => {
+        console.error('클립보드 자동 복사 실패:', err);
+      });
+    }
+  }, [isLoading, result]); // isLoading 상태가 바뀔 때마다 체크!
 
   // --- 버튼 클릭 시 실행되는 함수 ---
   const handleExecute = () => {
@@ -73,6 +111,12 @@ function App() {
     // 전체 배경과 폰트를 부드럽게 설정
     <div className="p-4 bg-slate-100 min-h-screen font-sans antialiased flex flex-col gap-4">
       <div className="max-w-md mx-auto">
+        {copied && (
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-10 transition-opacity duration-300">
+            결과가 클립보드에 복사되었습니다.
+          </div>
+        )}
+
         <h3 className="text-lg font-bold text-slate-800 mb-2">geminiCLI_onBrowser</h3>
         
         <div className="bg-white p-4 rounded-lg shadow-md">
