@@ -9,6 +9,8 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [history, setHistory] = useState([]);
   const [copied, setCopied] = useState(false); // 복사 완료 메시지 표시용 상태
+  const [includePageText, setIncludePageText] = useState(false); // ⭐️ 1. 체크박스 상태 추가
+  
   const port = useRef(null);
   const resultRef = useRef(result); // ⭐️ result 상태를 추적하기 위한 ref
 
@@ -95,7 +97,7 @@ function App() {
     // 4. 백그라운드로 작업을 요청합니다.
     setResult(''); 
     setIsLoading(true);
-    port.current.postMessage({ action: "run_cli", prompt: trimmedPrompt });
+    port.current.postMessage({ action: "run_cli", prompt: trimmedPrompt, includePageText: includePageText });
   };
 
   const handleKeyDown = (event) => {
@@ -128,6 +130,19 @@ function App() {
             onKeyDown={handleKeyDown}
             placeholder="분석할 내용을 입력하세요... (Shift+Enter로 줄바꿈)"
           />
+          {/* ⭐️ 2. 체크박스 UI 추가 */}
+          <div className="mt-2 flex items-center">
+            <input
+              type="checkbox"
+              id="includePageText"
+              checked={includePageText}
+              onChange={(e) => setIncludePageText(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="includePageText" className="ml-2 block text-sm text-gray-900">
+              현재 페이지 텍스트 포함
+            </label>
+          </div>
           <button 
             onClick={handleExecute} 
             disabled={isLoading}

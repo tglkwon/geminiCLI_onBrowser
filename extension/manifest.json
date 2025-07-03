@@ -6,14 +6,19 @@
   "permissions": [
     "nativeMessaging",
     "storage",
-    "sidePanel"
+    "sidePanel",
+    "scripting", 
+    "activeTab" 
+  ],
+  "host_permissions": [
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "side_panel": {
     "default_path": "dist/index.html"
-  },
+  },  
   "action": {
     "default_title": "Open geminiCLI_onBrowser Panel",
     "default_icon": "icon128.png"
