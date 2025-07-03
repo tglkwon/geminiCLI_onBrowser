@@ -1,5 +1,6 @@
 # geminiCLI_onBrowser
 
+### version 0.3.6 rebuild fully in react
 ### version 0.3.5 feat(ui): Complete side panel architecture and functionality
 
 Deprecate the popup-based prototype and transition to a new, stable architecture using Chrome's sidePanel API. This approach ensures compliance with Google's policies while providing a robust user experience.

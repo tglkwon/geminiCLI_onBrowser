@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "geminiCLI_onBrowser (React Ver.)",
-  "version": "0.3.2",
+  "version": "0.5.0",
   "description": "Control local files and CLI via the browser side panel.",
   "permissions": [
     "nativeMessaging",
@@ -12,22 +12,19 @@
     "service_worker": "background.js"
   },
   "side_panel": {
-    "default_path": "react-ui/sidepanel/index.html"
+    "default_path": "dist/index.html"
   },
   "action": {
     "default_title": "Open geminiCLI_onBrowser Panel",
-    "default_icon": {
-      "128": "icons/icon128.png"
-    }
+    "default_icon": "icon128.png"
   },
   "icons": {
-    "128": "icons/icon128.png"
+    "128": "icon128.png"
   },
   "web_accessible_resources": [
     {
       "resources": [
-        "react-ui/sidepanel/*",
-        "react-ui/sidepanel/assets/*"
+        "dist/assets/*"
       ],
       "matches": [
         "<all_urls>"

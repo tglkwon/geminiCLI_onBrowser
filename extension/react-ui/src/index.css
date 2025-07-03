@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.history-list-reset {
+  list-style-type: none;
+  padding-left: 0;
+}
