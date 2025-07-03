@@ -1,5 +1,14 @@
 # geminiCLI_onBrowser
 
+### version 0.3.8 feat(context): Implement active page context awareness
+This introduces the core functionality for context-aware analysis by allowing the extension to read and use the text content of the user's active browser tab.
+Key Changes:
+- **UI:** Added an "Include current page text" checkbox in the Side Panel UI (`App.jsx`) to let the user control this feature.
+- **Manifest:** Updated `manifest.json` to include the necessary `activeTab` and `scripting` permissions required to access and execute scripts on the active page.
+- **Background Script:** Refactored `background.js` to handle new messages from the side panel. It now uses the `chrome.scripting.executeScript` API to inject a content script on-demand.
+- **Content Script:** Implemented logic within the injected script to extract the main text content from the active page's DOM.
+- **Native App:** Updated `main.py` to accept the additional page content and prepend it to the final prompt sent to the Gemini API, creating a richer context.
+
 ### version 0.3.7 feat(context): Implement current page text analysis
 This completes Phase 3, "Context-Aware Capability."
 

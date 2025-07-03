@@ -1,100 +1,126 @@
 import { useState, useEffect, useRef } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
 import './index.css';
+
+// --- 1. translations.js의 모든 내용을 App.jsx 안으로 가져옵니다 ---
+const translations = {
+  en: {
+    sidepanel_title: "geminiCLI_onBrowser",
+    prompt_placeholder: "Enter your prompt... (Shift+Enter for new line)",
+    execute_button: "Execute Command",
+    loading_text: "Executing...",
+    history_title: "Recent Commands",
+    history_empty: "No history yet.",
+    copied_message: "Result copied to clipboard.",
+    connecting_text: "Connecting to engine...",
+    ready_text: "Connection successful. Please enter a command.",
+    error_text: "An error occurred:",
+    prompt_empty_error: "Please enter a prompt.",
+    include_page_text_label: "Include current page text"
+  },
+  ko: {
+    sidepanel_title: "geminiCLI_onBrowser",
+    prompt_placeholder: "분석할 내용을 입력하세요... (Shift+Enter로 줄바꿈)",
+    execute_button: "명령 실행",
+    loading_text: "실행 중...",
+    history_title: "최근 명령어",
+    history_empty: "기록이 없습니다.",
+    copied_message: "결과가 클립보드에 복사되었습니다.",
+    connecting_text: "엔진과 연결 중입니다...",
+    ready_text: "연결되었습니다. 명령을 입력하세요.",
+    error_text: "오류가 발생했습니다:",
+    prompt_empty_error: "프롬프트를 입력해주세요.",
+    include_page_text_label: "현재 페이지 텍스트 포함"
+  },
+  ja: {
+    sidepanel_title: "geminiCLI_onBrowser",
+    prompt_placeholder: "分析したい内容を入力してください... (Shift+Enterで改行)",
+    execute_button: "コマンド実行",
+    loading_text: "実行中...",
+    history_title: "最近のコマンド",
+    history_empty: "履歴がありません。",
+    copied_message: "結果がクリップボードにコピーされました。",
+    connecting_text: "エンジンに接続しています...",
+    ready_text: "接続しました。コマンドを入力してください。",
+    error_text: "エラーが発生しました:",
+    prompt_empty_error: "プロンプトを入力してください。",
+    include_page_text_label: "現在ページテキストを含む"
+  }
+};
+
+function getTranslations() {
+  const language = chrome.i18n.getUILanguage();
+  if (language.startsWith('ko')) return translations.ko;
+  if (language.startsWith('ja')) return translations.ja;
+  return translations.en;
+}
+
+const initialTranslations = getTranslations();
 
 function App() {
   const [prompt, setPrompt] = useState('');
-  const [result, setResult] = useState('엔진과 연결 중입니다...');
+  const [result, setResult] = useState(initialTranslations.connecting_text);
   const [isLoading, setIsLoading] = useState(true);
   const [history, setHistory] = useState([]);
-  const [copied, setCopied] = useState(false); // 복사 완료 메시지 표시용 상태
-  const [includePageText, setIncludePageText] = useState(false); // ⭐️ 1. 체크박스 상태 추가
+  const [copied, setCopied] = useState(false);
+  const [includePageText, setIncludePageText] = useState(false);
+  const [i18n, setI18n] = useState(initialTranslations);
   
   const port = useRef(null);
-  const resultRef = useRef(result); // ⭐️ result 상태를 추적하기 위한 ref
+  const resultRef = useRef(result);
 
-  // ⭐️ result가 변경될 때마다 ref에도 최신 값을 저장
   useEffect(() => {
     resultRef.current = result;
   }, [result]);
 
-  // --- 컴포넌트가 처음 로드될 때 실행 ---
   useEffect(() => {
-    // 1. 백그라운드와 연결
+    const newI18n = getTranslations();
+    setI18n(newI18n);
+    setResult(newI18n.connecting_text);
+
     port.current = chrome.runtime.connect({ name: "sidepanel_channel" });
 
-    // 2. 메시지 수신 리스너 설정
     port.current.onMessage.addListener((msg) => {
+      setIsLoading(false);
       if (msg.status === "ready") {
-        setIsLoading(false);
-        setResult("연결되었습니다. 명령을 입력하세요.");
+        setResult(newI18n.ready_text);
       } else if (msg.status === "streaming") {
-        setIsLoading(true); // 스트리밍 중에는 계속 로딩 상태
-        setResult(prev => (prev.startsWith('엔진과') || prev.startsWith('연결') || prev.startsWith('오류') ? msg.chunk : prev + msg.chunk));
+        setResult(prev => (prev === newI18n.connecting_text || prev === newI18n.ready_text || prev.startsWith(newI18n.error_text) ? msg.chunk : prev + msg.chunk));
       } else if (msg.status === "success") {
-        // ⭐️ 'success' 신호를 받으면 로딩을 멈추고 바로 복사 실행
-        setIsLoading(false);
-        
-        // resultRef에서 최신 결과값을 가져와 복사
         const finalResult = resultRef.current;
-        if (finalResult && !finalResult.startsWith('엔진과') && !finalResult.startsWith('연결')) {
+        if (finalResult && !finalResult.startsWith(newI18n.connecting_text) && !finalResult.startsWith(newI18n.ready_text)) {
             navigator.clipboard.writeText(finalResult).then(() => {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2500);
-            }).catch(err => {
-                console.error('클립보드 자동 복사 실패:', err);
-            });
+            }).catch(err => { console.error('클립보드 자동 복사 실패:', err); });
         }
-
       } else if (msg.status === "error") {
-        setIsLoading(false);
-        setResult("오류가 발생했습니다:\n" + msg.message);
+        setResult(newI18n.error_text + "\n" + msg.message);
       }
     });
 
-    // 3. 저장소에서 히스토리 불러오기 (최초 1회)
     chrome.storage.local.get({ promptHistory: [] }, (data) => {
-      console.log("최초 히스토리 로드:", data.promptHistory);
       setHistory(data.promptHistory);
     });
 
     return () => { if (port.current) port.current.disconnect(); };
   }, []);
-
-  // --- ⭐️ '로딩 완료' 시점을 감지하여 자동 복사 실행 ---
-  useEffect(() => {
-    // 로딩이 막 끝났고(false), 결과물이 있으며, 초기 메시지가 아닐 때
-    if (!isLoading && result && !result.startsWith('엔진과') && !result.startsWith('연결') && !result.startsWith('오류')) {
-      navigator.clipboard.writeText(result).then(() => {
-        setCopied(true);
-        const timer = setTimeout(() => setCopied(false), 2500);
-        return () => clearTimeout(timer);
-      }).catch(err => {
-        console.error('클립보드 자동 복사 실패:', err);
-      });
-    }
-  }, [isLoading, result]); // isLoading 상태가 바뀔 때마다 체크!
-
-  // --- 버튼 클릭 시 실행되는 함수 ---
+  
   const handleExecute = () => {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) {
-      setResult("프롬프트를 입력해주세요.");
+      setResult(i18n.prompt_empty_error);
       return;
     }
     
-    // '함수형 업데이트' 방식으로 setHistory를 호출합니다.
     setHistory(prevHistory => {
       const newHistory = [trimmedPrompt, ...prevHistory.filter(item => item !== trimmedPrompt)].slice(0, 10);
-      
-      // 이 안에서 storage 저장까지 함께 처리합니다.
       chrome.storage.local.set({ promptHistory: newHistory });
-      
-      return newHistory; // 새로운 히스토리 배열을 반환하여 상태를 업데이트합니다.
+      return newHistory;
     });
 
-    // 4. 백그라운드로 작업을 요청합니다.
     setResult(''); 
     setIsLoading(true);
     port.current.postMessage({ action: "run_cli", prompt: trimmedPrompt, includePageText: includePageText });
@@ -107,19 +133,16 @@ function App() {
     }
   };
 
-  console.log("리액트 렌더링. 현재 history 상태:", history);
-
   return (
-    // 전체 배경과 폰트를 부드럽게 설정
     <div className="p-4 bg-slate-100 min-h-screen font-sans antialiased flex flex-col gap-4">
       <div className="max-w-md mx-auto">
         {copied && (
           <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg z-10 transition-opacity duration-300">
-            결과가 클립보드에 복사되었습니다.
+            {i18n.copied_message}
           </div>
         )}
 
-        <h3 className="text-lg font-bold text-slate-800 mb-2">geminiCLI_onBrowser</h3>
+        <h3 className="text-lg font-bold text-slate-800 mb-2">{i18n.sidepanel_title}</h3>
         
         <div className="bg-white p-4 rounded-lg shadow-md">
           <textarea
@@ -128,9 +151,8 @@ function App() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="분석할 내용을 입력하세요... (Shift+Enter로 줄바꿈)"
+            placeholder={i18n.prompt_placeholder}
           />
-          {/* ⭐️ 2. 체크박스 UI 추가 */}
           <div className="mt-2 flex items-center">
             <input
               type="checkbox"
@@ -140,32 +162,31 @@ function App() {
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="includePageText" className="ml-2 block text-sm text-gray-900">
-              현재 페이지 텍스트 포함
+              {i18n.include_page_text_label}
             </label>
           </div>
           <button 
             onClick={handleExecute} 
             disabled={isLoading}
-            className="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-200"
+            className="w-full mt-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-200"
           >
             {isLoading ? (
               <div className="flex justify-center items-center">
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                <span>실행 중...</span>
+                <span>{i18n.loading_text}</span>
               </div>
-            ) : 'Execute Command'}
+            ) : i18n.execute_button}
           </button>
         </div>
 
-        {/* 결과창 */}
         <div className="text-sm">
           <SyntaxHighlighter
             language="python"
             style={vscDarkPlus}
             customStyle={{
               margin: 0,
-              borderRadius: '0.5rem', // 8px
-              padding: '1rem', // 16px
+              borderRadius: '0.5rem',
+              padding: '1rem',
               minHeight: '200px',
               boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
             }}
@@ -178,8 +199,8 @@ function App() {
         </div>
 
         <div className="text-left">
-          <h4 className="text-md font-semibold text-slate-700 mb-2">최근 명령어</h4>
-          <ul className="history-list-reset border border-slate-200 rounded-md max-h-40 overflow-y-auto">
+          <h4 className="text-md font-semibold text-slate-700 mb-2">{i18n.history_title}</h4>
+          <ul className="history-list-reset ...">
             {history.length > 0 ? history.map((item, index) => (
               <li 
                 key={`${item}-${index}`} 
@@ -189,7 +210,7 @@ function App() {
               >
                 {item}
               </li>
-            )) : <li className="p-3 text-sm text-slate-400">기록이 없습니다.</li>}
+            )) : <li className="p-3 text-sm text-slate-400">{i18n.history_empty}</li>}
           </ul>
         </div>
       </div>
@@ -197,4 +218,4 @@ function App() {
   )
 }
 
-export default App
+export default App;

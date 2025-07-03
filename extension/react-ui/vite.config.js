@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path' // 1. path 모듈을 import 합니다.
 
 export default defineConfig({
   base: './',
@@ -13,6 +14,11 @@ export default defineConfig({
         chunkFileNames: `assets/script.js`,
         assetFileNames: `assets/[name].[ext]`
       }
+    }
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
     }
   }
 })
